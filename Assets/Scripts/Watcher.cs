@@ -5,7 +5,7 @@ using UnityEngine;
 public class Watcher : MonoBehaviour
 {
     public float patrolSpeed = 1.5f;
-    public float patrolDistance = 1f; // shorter patrol distance
+    public float patrolDistance = 1f;
     public float viewRadius = 3f;
     public float alertDuration = 4f;
     public LayerMask playerMask;
@@ -18,7 +18,6 @@ public class Watcher : MonoBehaviour
 
     private int alertFrameIndex = 0;
     private float frameSwitchTimer = 0f;
-
 
     private Animator animator;
 
@@ -40,12 +39,14 @@ public class Watcher : MonoBehaviour
         targetPoint = rightPoint;
 
         animator.SetBool("IsAlerted", false);
+        animator.SetInteger("AlertFrame", 0);
     }
 
     private void Update()
     {
         if (isAlerted)
         {
+            alertTimer += Time.deltaTime;
             frameSwitchTimer += Time.deltaTime;
 
             if (frameSwitchTimer >= 1.0f && alertFrameIndex < 4)
@@ -57,12 +58,12 @@ public class Watcher : MonoBehaviour
 
             if (!PlayerStillInView())
             {
-                isAlerted = false;
-                alertTimer = 0f;
-                alertFrameIndex = 0;
-                frameSwitchTimer = 0f;
-                animator.SetBool("IsAlerted", false);
-                animator.SetInteger("AlertFrame", 0);
+                ResetAlertState();
+            }
+            else if (alertTimer >= alertDuration)
+            {
+                // For future attack transition
+                Debug.Log("Watcher would attack here.");
             }
         }
         else
@@ -71,17 +72,10 @@ public class Watcher : MonoBehaviour
 
             if (DetectPlayer())
             {
-                isAlerted = true;
-                alertTimer = 0f;
-                alertFrameIndex = 0;
-                frameSwitchTimer = 0f;
-                animator.SetBool("IsAlerted", true);
-                animator.SetInteger("AlertFrame", 0);
+                EnterAlertState();
             }
         }
     }
-
-
 
     private void Patrol()
     {
@@ -93,7 +87,6 @@ public class Watcher : MonoBehaviour
                 isPausedAtEdge = false;
                 patrolPauseTimer = 0f;
 
-                // Flip sprite AFTER pause
                 movingRight = !movingRight;
                 targetPoint = movingRight ? rightPoint : leftPoint;
                 Vector3 localScale = transform.localScale;
@@ -135,12 +128,33 @@ public class Watcher : MonoBehaviour
         return false;
     }
 
+    private void EnterAlertState()
+    {
+        isAlerted = true;
+        alertTimer = 0f;
+        alertFrameIndex = 0;
+        frameSwitchTimer = 0f;
+        animator.SetBool("IsAlerted", true);
+        animator.SetInteger("AlertFrame", 0);
+    }
+
+    private void ResetAlertState()
+    {
+        isAlerted = false;
+        alertTimer = 0f;
+        alertFrameIndex = 0;
+        frameSwitchTimer = 0f;
+        animator.SetBool("IsAlerted", false);
+        animator.SetInteger("AlertFrame", 0);
+    }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, viewRadius);
     }
 }
+
 
 
 
