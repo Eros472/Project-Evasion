@@ -1,14 +1,21 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class Watcher : MonoBehaviour
 {
+    private BoxCollider2D boxCollider;
+
+    private Vector3 moveDelta;
+    private RaycastHit2D hit;
+
     [Header("Patrol Settings")]
     public Transform pointA;
     public Transform pointB;
     public float patrolSpeed = 2f;
     private Vector3 targetPoint;
+    private bool movingToB = true; // NEW: Tracks direction
 
     [Header("Field of Vision Settings")]
     public float viewRadius = 5f;
@@ -25,10 +32,14 @@ public class Watcher : MonoBehaviour
     private void Start()
     {
         targetPoint = pointB.position;
+        Debug.Log($"Watcher starting at {transform.position}, pointA: {pointA.position}, pointB: {pointB.position}");
+        
         if (showFOV && fovRenderer != null)
         {
             fovRenderer.positionCount = fovResolution + 1;
         }
+
+        DontDestroyOnLoad(this.gameObject);
     }
 
     private void Update()
@@ -42,31 +53,54 @@ public class Watcher : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        Debug.LogWarning("WATCHER DESTROYED!!! Stack trace: " + Environment.StackTrace);
+    }
+
+    private bool isWaiting = false;
+
     private void Patrol()
     {
-        transform.position = Vector3.MoveTowards(transform.position, targetPoint, patrolSpeed * Time.deltaTime);
+        if (isWaiting) return;
+
+        targetPoint.z = 0;
+        transform.position = new Vector3(transform.position.x, transform.position.y, 0);
+
+        Vector3 newPos = Vector3.MoveTowards(transform.position, targetPoint, patrolSpeed * Time.deltaTime);
+        transform.position = new Vector3(newPos.x, newPos.y, 0);
 
         if (Vector3.Distance(transform.position, targetPoint) < 0.1f)
         {
-            targetPoint = (targetPoint == pointA.position) ? pointB.position : pointA.position;
-            transform.localScale = new Vector3(-transform.localScale.x, transform.localScale.y, transform.localScale.z); // Flip sprite if needed
+            StartCoroutine(PauseBeforeTurning());
         }
+    }
+
+    private IEnumerator PauseBeforeTurning()
+    {
+        isWaiting = true;
+        yield return new WaitForSeconds(1f); // 1 second pause
+        movingToB = !movingToB;
+        targetPoint = movingToB ? pointB.position : pointA.position;
+        isWaiting = false;
     }
 
     private void DetectPlayer()
     {
-        Collider[] rangeChecks = Physics.OverlapSphere(transform.position, viewRadius, playerMask);
+        Collider2D[] rangeChecks = Physics2D.OverlapCircleAll(transform.position, viewRadius, playerMask);
 
-        if (rangeChecks.Length != 0)
+        foreach (Collider2D col in rangeChecks)
         {
-            Transform target = rangeChecks[0].transform;
+            Debug.Log($"Detected object: {col.gameObject.name}");
+
+            Transform target = col.transform;
             Vector3 directionToTarget = (target.position - transform.position).normalized;
 
-            if (Vector3.Angle(transform.forward, directionToTarget) < viewAngle / 2)
+            if (Vector3.Angle(transform.right, directionToTarget) < viewAngle / 2)
             {
                 float distanceToTarget = Vector3.Distance(transform.position, target.position);
 
-                if (!Physics.Raycast(transform.position, directionToTarget, distanceToTarget, obstructionMask))
+                if (!Physics2D.Raycast(transform.position, directionToTarget, distanceToTarget, obstructionMask))
                 {
                     playerDetected = true;
                     KillPlayer(target.gameObject);
@@ -81,24 +115,26 @@ public class Watcher : MonoBehaviour
                 playerDetected = false;
             }
         }
-        else
-        {
-            playerDetected = false;
-        }
     }
 
     private void KillPlayer(GameObject player)
     {
         Debug.Log("Player detected and killed!");
-        Destroy(player); // Replace with proper player death logic
+        //Destroy(player); // Replace with proper player death logic
     }
 
     private void DrawFieldOfView()
     {
+        if (fovRenderer == null)
+            return;
+
+        if (fovRenderer.positionCount != fovResolution + 1)
+        {
+            fovRenderer.positionCount = fovResolution + 1;
+        }
+
         float angleStep = viewAngle / fovResolution;
         float startingAngle = -viewAngle / 2;
-
-        fovRenderer.SetPosition(0, transform.position);
 
         for (int i = 0; i <= fovResolution; i++)
         {
@@ -114,15 +150,25 @@ public class Watcher : MonoBehaviour
     {
         if (!angleIsGlobal)
         {
-            angleInDegrees += transform.eulerAngles.y;
+            angleInDegrees += transform.eulerAngles.z;
         }
-        return new Vector3(Mathf.Sin(angleInDegrees * Mathf.Deg2Rad), 0, Mathf.Cos(angleInDegrees * Mathf.Deg2Rad));
+
+        return new Vector3(Mathf.Cos(angleInDegrees * Mathf.Deg2Rad), Mathf.Sin(angleInDegrees * Mathf.Deg2Rad), 0);
     }
 
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, viewRadius);
+
+        if (pointA != null && pointB != null)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawSphere(pointA.position, 0.2f);
+            Gizmos.DrawSphere(pointB.position, 0.2f);
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(pointA.position, pointB.position);
+        }
     }
 }
 
