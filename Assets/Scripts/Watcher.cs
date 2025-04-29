@@ -4,11 +4,17 @@ using UnityEngine;
 
 public class Watcher : MonoBehaviour
 {
-    public float patrolSpeed = 1.5f;
-    public float patrolDistance = 1f;
-    public float viewRadius = 3f;
+    public float patrolSpeed = 1.5f; // From original slower patrol speed
+    public float chaseSpeed = 2.5f;
+    public float patrolDistance = 1f; // From original shorter patrol distance
+    public float viewRadius = 5f;
     public float alertDuration = 4f;
     public LayerMask playerMask;
+    public LayerMask obstructionMask;
+
+    public bool showFOV = true;
+    public LineRenderer fovRenderer;
+    public int fovResolution = 20;
 
     private Vector3 initialPosition;
     private Vector3 leftPoint;
@@ -20,14 +26,14 @@ public class Watcher : MonoBehaviour
     private float frameSwitchTimer = 0f;
 
     private Animator animator;
+    private Transform playerTarget;
 
     private bool isAlerted = false;
     private float alertTimer = 0f;
-    private bool playerCurrentlyInView = false;
-
-    private float patrolPauseDuration = 1f;
-    private float patrolPauseTimer = 0f;
     private bool isPausedAtEdge = false;
+    private float patrolPauseTimer = 0f;
+    private float patrolPauseDuration = 1f;
+    private bool isChasing = false;
 
     private void Start()
     {
@@ -38,12 +44,23 @@ public class Watcher : MonoBehaviour
         rightPoint = initialPosition + Vector3.right * patrolDistance;
         targetPoint = rightPoint;
 
+        if (showFOV && fovRenderer != null)
+        {
+            fovRenderer.positionCount = fovResolution + 1;
+        }
+
         animator.SetBool("IsAlerted", false);
-        animator.SetInteger("AlertFrame", 0);
+        animator.SetBool("IsChasing", false);
     }
 
     private void Update()
     {
+        if (isChasing)
+        {
+            ChasePlayer();
+            return;
+        }
+
         if (isAlerted)
         {
             alertTimer += Time.deltaTime;
@@ -62,8 +79,9 @@ public class Watcher : MonoBehaviour
             }
             else if (alertTimer >= alertDuration)
             {
-                // For future attack transition
-                Debug.Log("Watcher would attack here.");
+                animator.SetTrigger("AttackTrigger");
+                isChasing = true;
+                animator.SetBool("IsChasing", true);
             }
         }
         else
@@ -72,8 +90,18 @@ public class Watcher : MonoBehaviour
 
             if (DetectPlayer())
             {
-                EnterAlertState();
+                isAlerted = true;
+                alertTimer = 0f;
+                alertFrameIndex = 0;
+                frameSwitchTimer = 0f;
+                animator.SetBool("IsAlerted", true);
+                animator.SetInteger("AlertFrame", 0);
             }
+        }
+
+        if (showFOV && fovRenderer != null)
+        {
+            DrawFieldOfView();
         }
     }
 
@@ -104,6 +132,28 @@ public class Watcher : MonoBehaviour
         }
     }
 
+    private void ChasePlayer()
+    {
+        if (playerTarget == null || !PlayerStillInView())
+        {
+            isChasing = false;
+            animator.SetBool("IsChasing", false);
+            ResetAlertState();
+            return;
+        }
+
+        transform.position = Vector3.MoveTowards(transform.position, playerTarget.position, chaseSpeed * Time.deltaTime);
+
+        Vector3 direction = playerTarget.position - transform.position;
+        transform.localScale = new Vector3(direction.x > 0 ? 1 : -1, 1, 1);
+
+        if (Vector3.Distance(transform.position, playerTarget.position) < 0.5f)
+        {
+            Destroy(playerTarget.gameObject);
+            animator.SetBool("IsChasing", false);
+        }
+    }
+
     private bool DetectPlayer()
     {
         Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, viewRadius, playerMask);
@@ -111,6 +161,7 @@ public class Watcher : MonoBehaviour
         {
             if (hit.CompareTag("Player"))
             {
+                playerTarget = hit.transform;
                 return true;
             }
         }
@@ -123,19 +174,12 @@ public class Watcher : MonoBehaviour
         foreach (Collider2D hit in hits)
         {
             if (hit.CompareTag("Player"))
+            {
+                playerTarget = hit.transform;
                 return true;
+            }
         }
         return false;
-    }
-
-    private void EnterAlertState()
-    {
-        isAlerted = true;
-        alertTimer = 0f;
-        alertFrameIndex = 0;
-        frameSwitchTimer = 0f;
-        animator.SetBool("IsAlerted", true);
-        animator.SetInteger("AlertFrame", 0);
     }
 
     private void ResetAlertState()
@@ -148,10 +192,45 @@ public class Watcher : MonoBehaviour
         animator.SetInteger("AlertFrame", 0);
     }
 
+    private void DrawFieldOfView()
+    {
+        if (fovRenderer == null) return;
+
+        if (fovRenderer.positionCount != fovResolution + 1)
+        {
+            fovRenderer.positionCount = fovResolution + 1;
+        }
+
+        float angleStep = 90f / fovResolution; // Assume default angle of 90 for now
+        float startingAngle = -45f;
+
+        for (int i = 0; i <= fovResolution; i++)
+        {
+            float angle = startingAngle + angleStep * i;
+            Vector3 dir = DirFromAngle(angle, true);
+            Vector3 pos = transform.position + dir * viewRadius;
+
+            fovRenderer.SetPosition(i, pos);
+        }
+    }
+
+    private Vector3 DirFromAngle(float angleInDegrees, bool angleIsGlobal)
+    {
+        if (!angleIsGlobal)
+        {
+            angleInDegrees += transform.eulerAngles.z;
+        }
+
+        return new Vector3(Mathf.Cos(angleInDegrees * Mathf.Deg2Rad), Mathf.Sin(angleInDegrees * Mathf.Deg2Rad), 0);
+    }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, viewRadius);
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawLine(transform.position + Vector3.left * patrolDistance, transform.position + Vector3.right * patrolDistance);
     }
 }
 
