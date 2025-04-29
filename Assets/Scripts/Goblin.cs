@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GoblinArcher : MonoBehaviour
+public class Goblin : MonoBehaviour
 {
     public Transform target; // Player's position or enemy to aim at
     public GameObject arrowPrefab; // The arrow prefab to be shot
