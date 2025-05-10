@@ -4,6 +4,13 @@ using UnityEngine;
 
 public class Watcher : MonoBehaviour
 {
+    [Tooltip("If true, Watcher will patrol vertically instead of horizontally.")]
+    public bool patrolsVertically = false;
+
+    [Tooltip("LayerMask for wall/obstacle detection")]
+    public LayerMask Blocking;
+
+
     public float patrolSpeed = 1.5f; // From original slower patrol speed
     public float chaseSpeed = 2.5f;
     public float patrolDistance = 1f; // From original shorter patrol distance
@@ -21,6 +28,9 @@ public class Watcher : MonoBehaviour
     private Vector3 rightPoint;
     private Vector3 targetPoint;
     private bool movingRight = true;
+    private float returnToIdleTimer = 0f;
+    private bool returningToIdle = false;
+
 
     private int alertFrameIndex = 0;
     private float frameSwitchTimer = 0f;
@@ -40,8 +50,17 @@ public class Watcher : MonoBehaviour
         animator = GetComponent<Animator>();
         initialPosition = transform.position;
 
-        leftPoint = initialPosition + Vector3.left * patrolDistance;
-        rightPoint = initialPosition + Vector3.right * patrolDistance;
+        if (patrolsVertically)
+        {
+            leftPoint = initialPosition + Vector3.down * patrolDistance;
+            rightPoint = initialPosition + Vector3.up * patrolDistance;
+        }
+        else
+        {
+            leftPoint = initialPosition + Vector3.left * patrolDistance;
+            rightPoint = initialPosition + Vector3.right * patrolDistance;
+        }
+
         targetPoint = rightPoint;
 
         if (showFOV && fovRenderer != null)
@@ -53,8 +72,23 @@ public class Watcher : MonoBehaviour
         animator.SetBool("IsChasing", false);
     }
 
+
     private void Update()
     {
+
+        UpdatePatrolPoints();
+
+        if (returningToIdle)
+        {
+            returnToIdleTimer += Time.deltaTime;
+            if (returnToIdleTimer >= 2f)
+            {
+                returningToIdle = false;
+                returnToIdleTimer = 0f;
+                animator.Play("Idle");
+            }
+        }
+
         if (isChasing)
         {
             ChasePlayer();
@@ -79,10 +113,10 @@ public class Watcher : MonoBehaviour
             }
             else if (alertTimer >= alertDuration)
             {
-                animator.SetTrigger("AttackTrigger");
                 isChasing = true;
                 animator.SetBool("IsChasing", true);
             }
+
         }
         else
         {
@@ -104,6 +138,7 @@ public class Watcher : MonoBehaviour
             DrawFieldOfView();
         }
     }
+
 
     private void Patrol()
     {
@@ -129,7 +164,16 @@ public class Watcher : MonoBehaviour
         if (Vector3.Distance(transform.position, targetPoint) < 0.01f)
         {
             isPausedAtEdge = true;
+
+            // Flip only for horizontal patrols
+            if (!patrolsVertically)
+            {
+                Vector3 localScale = transform.localScale;
+                localScale.x = movingRight ? 1 : -1;
+                transform.localScale = localScale;
+            }
         }
+
     }
 
     private void ChasePlayer()
@@ -138,9 +182,12 @@ public class Watcher : MonoBehaviour
         {
             isChasing = false;
             animator.SetBool("IsChasing", false);
-            ResetAlertState();
+            ResetAlertState(); // still in WatcherAlerted4
+            returningToIdle = true;
+            returnToIdleTimer = 0f;
             return;
         }
+
 
         transform.position = Vector3.MoveTowards(transform.position, playerTarget.position, chaseSpeed * Time.deltaTime);
 
@@ -232,6 +279,58 @@ public class Watcher : MonoBehaviour
         Gizmos.color = Color.cyan;
         Gizmos.DrawLine(transform.position + Vector3.left * patrolDistance, transform.position + Vector3.right * patrolDistance);
     }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+
+        Debug.Log("Collision Detected with: " + collision.gameObject.name);
+        // Only respond to collisions with obstacle layer
+        if (((1 << collision.gameObject.layer) & Blocking) != 0)
+        {
+            // Instantly reverse patrol direction
+            isPausedAtEdge = true;
+            patrolPauseTimer = 0f; // Will trigger direction flip after 1s pause
+
+
+            if (patrolsVertically)
+            {
+                // Flip on Y-axis to face up/down
+                Vector3 localScale = transform.localScale;
+                localScale.y = movingRight ? 1 : -1;
+                transform.localScale = localScale;
+            }
+            else
+            {
+                // Flip on X-axis to face left/right
+                Vector3 localScale = transform.localScale;
+                localScale.x = movingRight ? 1 : -1;
+                transform.localScale = localScale;
+            }
+
+        }
+    }
+
+    private void UpdatePatrolPoints()
+    {
+        if (patrolsVertically)
+        {
+            leftPoint = initialPosition + Vector3.down * patrolDistance;
+            rightPoint = initialPosition + Vector3.up * patrolDistance;
+        }
+        else
+        {
+            leftPoint = initialPosition + Vector3.left * patrolDistance;
+            rightPoint = initialPosition + Vector3.right * patrolDistance;
+        }
+
+        // Update current target point if you're not chasing
+        if (!isChasing && !isAlerted)
+        {
+            targetPoint = movingRight ? rightPoint : leftPoint;
+        }
+    }
+
+
 }
 
 
