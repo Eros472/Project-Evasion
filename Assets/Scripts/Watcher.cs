@@ -283,7 +283,7 @@ public class Watcher : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D collision)
     {
 
-        Debug.Log("Collision Detected with: " + collision.gameObject.name);
+        //Debug.Log("Collision Detected with: " + collision.gameObject.name);
         // Only respond to collisions with obstacle layer
         if (((1 << collision.gameObject.layer) & Blocking) != 0)
         {

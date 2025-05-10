@@ -14,7 +14,7 @@ TagManager:
   - Blocking
   - Actor
   - Player
-  - 
+  - Arrow
   - 
   - 
   - 
@@ -49,4 +49,7 @@ TagManager:
     locked: 0
   - name: Background
     uniqueID: 1250410919
+    locked: 0
+  - name: Projectile
+    uniqueID: 3837413665
     locked: 0
