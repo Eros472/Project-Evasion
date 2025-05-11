@@ -14,12 +14,14 @@ public class Ogre : MonoBehaviour
     private Animator animator;
     private OgreState currentState = OgreState.Idle;
     private float stateTimer = 0f;
+    private OgreState nextState;
 
     private enum OgreState
     {
         Idle,
         Alert,
         Throw,
+        Chase,
         Melee,
         Cooldown
     }
@@ -31,35 +33,73 @@ public class Ogre : MonoBehaviour
 
     private void Update()
     {
+        var animState = animator.GetCurrentAnimatorStateInfo(0);
+        if (animState.IsName("Ogre_Chase")) Debug.Log("Animator: CHASE animation playing");
+
         switch (currentState)
         {
             case OgreState.Idle:
-                LookForPlayer();
+                animator.SetBool("isChasing", false);
+                Collider2D hit = Physics2D.OverlapCircle(transform.position, detectionRadius, playerMask);
+                if (hit != null)
+                {
+                    player = hit.transform;
+                    float dist = Vector2.Distance(transform.position, player.position);
+                    // Engage chase if reasonably close
+                    nextState = (dist <= detectionRadius * 0.7f) ? OgreState.Chase : OgreState.Throw;
+
+                    animator.SetTrigger("isAlerted");
+                    TransitionTo(OgreState.Alert, 1.5f);
+                }
                 break;
 
             case OgreState.Alert:
                 stateTimer -= Time.deltaTime;
+                if (!PlayerInRange(0f, detectionRadius))
+                {
+                    TransitionTo(OgreState.Idle);
+                    break;
+                }
                 if (stateTimer <= 0f)
                 {
-                    if (PlayerInRange(meleeRange))
+                    TransitionTo(nextState);
+                }
+                break;
+
+            case OgreState.Chase:
+                if (player != null)
+                {
+                    animator.SetBool("isChasing", true);
+                    FacePlayer();
+
+                    float dist = Vector2.Distance(transform.position, player.position);
+                    Debug.Log("Chasing player — distance: " + dist);
+
+                    if (dist > 0.5f)
+                    {
+                        transform.position = Vector2.MoveTowards(
+                            transform.position,
+                            player.position,
+                            chaseSpeed * Time.deltaTime
+                        );
+                    }
+
+                    if (dist <= 0.5f)
+                    {
+                        Debug.Log("Player in melee range — attacking.");
+                        animator.SetBool("isChasing", false);
+                        animator.SetTrigger("meleeAttack");
                         TransitionTo(OgreState.Melee);
-                    else
-                        TransitionTo(OgreState.Throw);
+                    }
                 }
                 break;
 
             case OgreState.Throw:
-                // ThrowBoulder() called by animation event
                 FacePlayer();
                 break;
 
             case OgreState.Melee:
-                if (player != null)
-                {
-                    FacePlayer();
-                    // Chase the player continuously
-                    transform.position = Vector2.MoveTowards(transform.position, player.position, chaseSpeed * Time.deltaTime);
-                }
+                // Attack animation plays, kill handled on collision
                 break;
 
             case OgreState.Cooldown:
@@ -70,22 +110,51 @@ public class Ogre : MonoBehaviour
         }
     }
 
-    private void LookForPlayer()
+    private void TransitionTo(OgreState newState, float delay = 0f)
     {
-        if (currentState != OgreState.Idle) return;
+        currentState = newState;
+        stateTimer = delay;
 
-        Collider2D hit = Physics2D.OverlapCircle(transform.position, detectionRadius, playerMask);
-        if (hit != null)
+        switch (newState)
         {
-            player = hit.transform;
-            Debug.Log("Player detected! Entering ALERT state.");
-            TransitionTo(OgreState.Alert, 0.5f);
+            case OgreState.Alert:
+                Debug.Log("Entering ALERT");
+                break;
+
+            case OgreState.Throw:
+                Debug.Log("Entering THROW");
+                animator.ResetTrigger("meleeAttack");
+                animator.ResetTrigger("isAlerted");
+                animator.SetBool("isChasing", false);
+                animator.SetTrigger("isThrowing");
+                break;
+
+            case OgreState.Chase:
+                Debug.Log("Entering CHASE");
+                animator.SetBool("isChasing", true);
+                break;
+
+            case OgreState.Melee:
+                Debug.Log("Entering MELEE");
+                animator.SetBool("isChasing", false);
+                break;
+
+            case OgreState.Cooldown:
+                Debug.Log("Entering COOLDOWN");
+                break;
+
+            case OgreState.Idle:
+                Debug.Log("Returning to IDLE");
+                animator.SetBool("isChasing", false);
+                break;
         }
     }
 
-    private bool PlayerInRange(float range)
+    private bool PlayerInRange(float min, float max)
     {
-        return player != null && Vector2.Distance(transform.position, player.position) <= range;
+        if (player == null) return false;
+        float dist = Vector2.Distance(transform.position, player.position);
+        return dist >= min && dist <= max;
     }
 
     private void FacePlayer()
@@ -97,43 +166,20 @@ public class Ogre : MonoBehaviour
         transform.localScale = scale;
     }
 
-    private void TransitionTo(OgreState newState, float delay = 0f)
-    {
-        currentState = newState;
-        stateTimer = delay;
-
-        switch (newState)
-        {
-            case OgreState.Alert:
-                animator.Play("Ogre_Alert");
-                break;
-            case OgreState.Throw:
-                animator.SetTrigger("ThrowTrigger");
-                break;
-            case OgreState.Melee:
-                animator.SetTrigger("MeleeTrigger");
-                break;
-        }
-    }
-
-    // This gets called via animation event at the right frame
+    // Called by animation event
     public void ThrowBoulder()
     {
-        Debug.Log("THROW BOULDER CALLED!");
-
         if (player == null) return;
 
         Vector2 dir = (player.position - throwPoint.position).normalized;
         GameObject boulder = Instantiate(boulderPrefab, throwPoint.position, Quaternion.identity);
 
-        // Ensure it has Rigidbody2D
         Rigidbody2D rb = boulder.GetComponent<Rigidbody2D>();
         if (rb != null)
         {
-            rb.velocity = dir * 5f; // Match Goblin's arrow speed
+            rb.velocity = dir * 5f;
         }
 
-        // Optional flip or rotate
         SpriteRenderer sr = boulder.GetComponent<SpriteRenderer>();
         if (sr != null)
         {
@@ -144,6 +190,14 @@ public class Ogre : MonoBehaviour
         TransitionTo(OgreState.Cooldown, cooldownTime);
     }
 
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Player") && currentState == OgreState.Melee)
+        {
+            Debug.Log("Player touched — Ogre kills player.");
+            Destroy(collision.gameObject); // Replace with player.Die() if needed
+        }
+    }
 
     private void OnDrawGizmosSelected()
     {
