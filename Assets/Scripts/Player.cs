@@ -1,6 +1,6 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Player : MonoBehaviour
 {
@@ -9,17 +9,31 @@ public class Player : MonoBehaviour
     private Vector3 moveDelta;
     private RaycastHit2D hit;
 
-    public float walkMultiplier = 1.0f;    // normal walking speed
-    public float runMultiplier = 1.5f;      // running speed (50% faster)
+    public float walkMultiplier = 1.0f;
+    public float runMultiplier = 1.5f;
+
+    public int maxHealth = 20;
+    private int currentHealth;
+    private bool isDead = false;
+
+    public HealthBar healthBar;
 
     private void Start()
     {
         boxCollider = GetComponent<BoxCollider2D>();
         animator = GetComponent<Animator>();
+        currentHealth = maxHealth;
+
+        if (healthBar != null)
+        {
+            healthBar.SetMaxHealth(maxHealth);
+        }
     }
 
     private void FixedUpdate()
     {
+        if (isDead) return;
+
         float x = Input.GetAxisRaw("Horizontal");
         float y = Input.GetAxisRaw("Vertical");
 
@@ -37,84 +51,44 @@ public class Player : MonoBehaviour
         animator.SetBool("IsCrouching", isCrouching);
         animator.SetFloat("Speed", moveDelta.sqrMagnitude);
 
-        // Decide speedMultiplier
         float speedMultiplier = walkMultiplier;
         if (isRunning)
             speedMultiplier = runMultiplier;
         if (isCrouching)
-            speedMultiplier = walkMultiplier * 0.5f; // move 50% slower when crouching
+            speedMultiplier = walkMultiplier * 0.5f;
 
         animator.speed = isRunning ? 1.5f : 1.0f;
 
-        // Vertical movement collision
-        hit = Physics2D.BoxCast(transform.position, boxCollider.size, 0, new Vector2(0, moveDelta.y), Mathf.Abs(moveDelta.y * Time.deltaTime * speedMultiplier), LayerMask.GetMask("Actor", "Blocking"));
-        if (hit.collider == null)
+        transform.Translate(moveDelta * speedMultiplier * Time.fixedDeltaTime);
+    }
+
+    public void TakeDamage(int amount)
+    {
+        if (isDead) return;
+
+        currentHealth -= amount;
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+
+        if (healthBar != null)
         {
-            transform.Translate(0, moveDelta.y * Time.deltaTime * speedMultiplier, 0);
+            healthBar.SetHealth(currentHealth);
         }
 
-        // Horizontal movement collision
-        hit = Physics2D.BoxCast(transform.position, boxCollider.size, 0, new Vector2(moveDelta.x, 0), Mathf.Abs(moveDelta.x * Time.deltaTime * speedMultiplier), LayerMask.GetMask("Actor", "Blocking"));
-        if (hit.collider == null)
+        Debug.Log("Player took damage. Current health: " + currentHealth);
+
+        if (currentHealth <= 0)
         {
-            transform.Translate(moveDelta.x * Time.deltaTime * speedMultiplier, 0, 0);
+            StartCoroutine(Die());
         }
+    }
+
+    private IEnumerator Die()
+    {
+        isDead = true;
+        animator.SetTrigger("Die");
+
+        yield return new WaitForSeconds(1.5f);
+
+        SceneManager.LoadScene("MainMenu");
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*public class Player : MonoBehaviour
-{
-    private BoxCollider2D boxCollider;
-
-    private Vector3 moveDelta;
-
-    private RaycastHit2D hit;
-
-    private void Start()
-    {
-        boxCollider = GetComponent<BoxCollider2D>();
-    }
-
-    private void FixedUpdate()
-    {
-        float x = Input.GetAxisRaw("Horizontal");
-        float y = Input.GetAxisRaw("Vertical");
-
-        //reset moveDelta
-        moveDelta = new Vector3(x, y, 0);
-
-        //Swap sprite direction, whether you're going right or left
-        if (moveDelta.x > 0)
-            transform.localScale = Vector3.one;
-
-        else if (moveDelta.x < 0)
-            transform.localScale = new Vector3(-1, 1, 1);
-
-        //Make sure we can move in this direction, by casting a box there first, if the box returns null, we're free to move
-        hit = Physics2D.BoxCast(transform.position, boxCollider.size, 0, new Vector2(0, moveDelta.y), Mathf.Abs(moveDelta.y * Time.deltaTime), LayerMask.GetMask("Actor", "Blocking"));
-        if(hit.collider == null)
-        {
-            //Make this thing move!
-            transform.Translate(0, moveDelta.y * Time.deltaTime, 0);
-        }
-
-        hit = Physics2D.BoxCast(transform.position, boxCollider.size, 0, new Vector2(moveDelta.x, 0), Mathf.Abs(moveDelta.x * Time.deltaTime), LayerMask.GetMask("Actor", "Blocking"));
-        if (hit.collider == null)
-        {
-            //Make this thing move!
-            transform.Translate(moveDelta.x * Time.deltaTime,0, 0);
-        }
-    }
-}*/

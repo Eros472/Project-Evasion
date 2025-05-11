@@ -2,12 +2,12 @@ using UnityEngine;
 
 public class Arrow : MonoBehaviour
 {
-    public int damage = 1;
+    public int damage = 3;
     public float lifeTime = 5f;
 
     private void Start()
     {
-        Destroy(gameObject, lifeTime); // Auto-destroy after time
+        Destroy(gameObject, lifeTime);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -16,13 +16,13 @@ public class Arrow : MonoBehaviour
 
         if (other.CompareTag("Player"))
         {
-            Destroy(other.gameObject);
-            Debug.Log("Player was hit and destroyed by an arrow!");
+            Player player = other.GetComponent<Player>();
+            if (player != null)
+            {
+                player.TakeDamage(damage);
+            }
         }
 
         Destroy(gameObject);
     }
-
-
 }
-

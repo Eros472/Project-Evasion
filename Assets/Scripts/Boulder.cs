@@ -6,6 +6,8 @@ public class Boulder : MonoBehaviour
     private Animator animator;
     private bool hasTriggered = false;
 
+    public int damage = 5;
+
     private void Start()
     {
         animator = GetComponent<Animator>();
@@ -15,7 +17,6 @@ public class Boulder : MonoBehaviour
             Debug.LogWarning("Boulder is missing Animator component!");
         }
 
-        // Automatically destroy after full lifetime
         Destroy(gameObject, lifetime);
     }
 
@@ -28,24 +29,18 @@ public class Boulder : MonoBehaviour
 
         if (animator != null)
         {
-            Debug.Log("Triggering BreakMid...");
             animator.SetTrigger("BreakMid");
         }
 
-
         if (collision.CompareTag("Player"))
         {
-            Debug.Log("BOULDER HIT PLAYER!");
-            Destroy(collision.gameObject);
+            Player player = collision.GetComponent<Player>();
+            if (player != null)
+            {
+                player.TakeDamage(damage);
+            }
         }
 
-        // Allow time for BreakMid → Impact animations to play fully
-        Destroy(gameObject, 1.2f);  // Increased to ~1.2s to be safe
-    }
-
-    // Optional: called by end of Impact animation via AnimationEvent
-    public void DestroySelf()
-    {
-        Destroy(gameObject);
+        Destroy(gameObject, 1f);
     }
 }
