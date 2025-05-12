@@ -41,15 +41,18 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
-  - name: Floor
+  - name: Background
     uniqueID: 3541778243
     locked: 0
-  - name: Actor
+  - name: Floor
     uniqueID: 3139550291
     locked: 0
-  - name: Background
+  - name: Actor
     uniqueID: 1250410919
     locked: 0
   - name: Projectile
     uniqueID: 3837413665
+    locked: 0
+  - name: Filler
+    uniqueID: 3340653955
     locked: 0
