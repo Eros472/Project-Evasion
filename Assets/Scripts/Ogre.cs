@@ -45,7 +45,6 @@ public class Ogre : MonoBehaviour
                 {
                     player = hit.transform;
                     float dist = Vector2.Distance(transform.position, player.position);
-                    // Engage chase if reasonably close
                     nextState = (dist <= detectionRadius * 0.7f) ? OgreState.Chase : OgreState.Throw;
 
                     animator.SetTrigger("isAlerted");
@@ -164,30 +163,6 @@ public class Ogre : MonoBehaviour
         Vector3 scale = transform.localScale;
         scale.x = (player.position.x < transform.position.x) ? -Mathf.Abs(scale.x) : Mathf.Abs(scale.x);
         transform.localScale = scale;
-    }
-
-    // Called by animation event
-    public void ThrowBoulder()
-    {
-        if (player == null) return;
-
-        Vector2 dir = (player.position - throwPoint.position).normalized;
-        GameObject boulder = Instantiate(boulderPrefab, throwPoint.position, Quaternion.identity);
-
-        Rigidbody2D rb = boulder.GetComponent<Rigidbody2D>();
-        if (rb != null)
-        {
-            rb.velocity = dir * 5f;
-        }
-
-        SpriteRenderer sr = boulder.GetComponent<SpriteRenderer>();
-        if (sr != null)
-        {
-            sr.flipX = dir.x < 0;
-        }
-
-        Debug.Log("Boulder thrown!");
-        TransitionTo(OgreState.Cooldown, cooldownTime);
     }
 
     private void OnTriggerEnter2D(Collider2D collision)

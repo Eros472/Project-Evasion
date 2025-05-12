@@ -12,21 +12,20 @@ public class Player : MonoBehaviour
     public float walkMultiplier = 1.0f;
     public float runMultiplier = 1.5f;
 
-    public int maxHealth = 20;
-    private int currentHealth;
     private bool isDead = false;
-
     public HealthBar healthBar;
 
     private void Start()
     {
         boxCollider = GetComponent<BoxCollider2D>();
         animator = GetComponent<Animator>();
-        currentHealth = maxHealth;
+
+        int currentHealth = GameManager.Instance.currentHealth;
 
         if (healthBar != null)
         {
-            healthBar.SetMaxHealth(maxHealth);
+            healthBar.SetMaxHealth(GameManager.Instance.maxHealth);
+            healthBar.SetHealth(currentHealth);
         }
     }
 
@@ -66,20 +65,24 @@ public class Player : MonoBehaviour
     {
         if (isDead) return;
 
-        currentHealth -= amount;
-        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        GameManager.Instance.currentHealth -= amount;
+        GameManager.Instance.currentHealth = Mathf.Clamp(GameManager.Instance.currentHealth, 0, GameManager.Instance.maxHealth);
 
         if (healthBar != null)
-        {
-            healthBar.SetHealth(currentHealth);
-        }
+            healthBar.SetHealth(GameManager.Instance.currentHealth);
 
-        Debug.Log("Player took damage. Current health: " + currentHealth);
-
-        if (currentHealth <= 0)
-        {
+        if (GameManager.Instance.currentHealth <= 0)
             StartCoroutine(Die());
-        }
+    }
+
+    public void Heal(int amount)
+    {
+        if (isDead) return;
+
+        GameManager.Instance.currentHealth = Mathf.Min(GameManager.Instance.currentHealth + amount, GameManager.Instance.maxHealth);
+
+        if (healthBar != null)
+            healthBar.SetHealth(GameManager.Instance.currentHealth);
     }
 
     private IEnumerator Die()
@@ -88,7 +91,6 @@ public class Player : MonoBehaviour
         animator.SetTrigger("Die");
 
         yield return new WaitForSeconds(1.5f);
-
         SceneManager.LoadScene("MainMenu");
     }
 }
