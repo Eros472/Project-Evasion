@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "Project-Evasion.sln"
+    "dotnet.defaultSolution": "Project-Evasion-branch3.sln"
 }
