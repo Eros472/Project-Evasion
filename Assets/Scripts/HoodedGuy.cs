@@ -27,7 +27,6 @@ public class HoodedGuy : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Rigidbody2D rb;
     private Vector2 lastMoveDirection = Vector2.right;
-    // lookDirection initialized in Start()
     private Vector2 lookDirection = Vector2.right;
     private bool lookingRight = true;
 
@@ -53,7 +52,6 @@ public class HoodedGuy : MonoBehaviour
         rb.constraints = RigidbodyConstraints2D.FreezeRotation;
 
         startPosition = transform.position;
-
         pointA = startPosition + (patrolsVertically ? Vector3.down : Vector3.left) * patrolDistance;
         pointB = startPosition + (patrolsVertically ? Vector3.up : Vector3.right) * patrolDistance;
         targetPoint = pointB;
@@ -68,9 +66,7 @@ public class HoodedGuy : MonoBehaviour
     void FixedUpdate()
     {
         if (currentState == State.WalkPatrol)
-        {
             WalkPatrolPhysics();
-        }
     }
 
     void Update()
@@ -95,11 +91,7 @@ public class HoodedGuy : MonoBehaviour
         {
             lastMoveDirection = moveDir.normalized;
             lookDirection = lastMoveDirection;
-
-            if (!patrolsVertically)
-                spriteRenderer.flipX = lastMoveDirection.x < 0;
-            else
-                spriteRenderer.flipX = false;
+            spriteRenderer.flipX = patrolsVertically ? false : lastMoveDirection.x < 0;
         }
 
         rb.MovePosition(rb.position + lastMoveDirection * moveSpeed * Time.fixedDeltaTime);
@@ -121,23 +113,17 @@ public class HoodedGuy : MonoBehaviour
 
         lookTimer += Time.deltaTime;
 
-        if (lookTimer < lookDuration / 2f)
+        if (lookTimer < lookDuration / 2f && !lookingRight)
         {
-            if (!lookingRight)
-            {
-                lookingRight = true;
-                lookDirection = patrolsVertically ? Vector2.up : Vector2.right; // updated for vertical patrol
-                UpdateConeBasedOnEyeDirection();
-            }
+            lookingRight = true;
+            lookDirection = patrolsVertically ? Vector2.up : Vector2.right;
+            UpdateConeBasedOnEyeDirection();
         }
-        else
+        else if (lookTimer >= lookDuration / 2f && lookingRight)
         {
-            if (lookingRight)
-            {
-                lookingRight = false;
-                lookDirection = patrolsVertically ? Vector2.down : Vector2.left; // updated for vertical patrol
-                UpdateConeBasedOnEyeDirection();
-            }
+            lookingRight = false;
+            lookDirection = patrolsVertically ? Vector2.down : Vector2.left;
+            UpdateConeBasedOnEyeDirection();
         }
 
         if (PlayerInSight())
@@ -154,22 +140,13 @@ public class HoodedGuy : MonoBehaviour
 
     bool PlayerInSight()
     {
+        if (player == null) return false;
+
         Vector2 toPlayer = player.position - transform.position;
         float angle = Vector2.Angle(lookDirection, toPlayer.normalized);
 
         RaycastHit2D hit = Physics2D.Raycast(transform.position, toPlayer.normalized, detectionRange, LayerMask.GetMask("Player"));
-
-        if (hit.collider != null && hit.collider.CompareTag("Player"))
-        {
-            return angle < detectionAngle;
-        }
-
-        return false;
-    }
-
-    IEnumerator FadeSprite(float targetAlpha)
-    {
-        yield break; // no longer used
+        return hit.collider != null && hit.collider.CompareTag("Player") && angle < detectionAngle;
     }
 
     IEnumerator FadeBoth(SpriteRenderer npcRenderer, SpriteRenderer coneRenderer, float targetAlpha)
@@ -194,17 +171,18 @@ public class HoodedGuy : MonoBehaviour
             coneRenderer.color = new Color(coneRenderer.color.r, coneRenderer.color.g, coneRenderer.color.b, targetAlpha);
     }
 
-    // removed duplicate outside-method assignment
-
     IEnumerator ReappearAndStrike()
     {
         SpriteRenderer coneRenderer = detectionCone != null ? detectionCone.GetComponent<SpriteRenderer>() : null;
-
         yield return StartCoroutine(FadeBoth(spriteRenderer, coneRenderer, 0f));
+
         yield return new WaitForSeconds(vanishDelay);
 
-        Vector2 offset = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f));
-        transform.position = player.position + (Vector3)offset;
+        if (player != null)
+        {
+            Vector2 offset = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f));
+            transform.position = player.position + (Vector3)offset;
+        }
 
         spriteRenderer.enabled = true;
         if (coneRenderer != null) coneRenderer.enabled = true;
@@ -218,8 +196,6 @@ public class HoodedGuy : MonoBehaviour
         {
             Destroy(player.gameObject);
         }
-
-
 
         yield return new WaitForSeconds(0.8f);
         animator.SetTrigger("ResumePatrol");
@@ -248,10 +224,7 @@ public class HoodedGuy : MonoBehaviour
 
     private Vector2 ClampToCardinal(Vector2 dir)
     {
-        if (Mathf.Abs(dir.x) > Mathf.Abs(dir.y))
-            return dir.x > 0 ? Vector2.right : Vector2.left;
-        else
-            return dir.y > 0 ? Vector2.up : Vector2.down;
+        return Mathf.Abs(dir.x) > Mathf.Abs(dir.y) ? (dir.x > 0 ? Vector2.right : Vector2.left) : (dir.y > 0 ? Vector2.up : Vector2.down);
     }
 
     public void EnableLightCone()
@@ -274,6 +247,7 @@ public class HoodedGuy : MonoBehaviour
             StartCoroutine(ReappearAndStrike());
         }
     }
+
     void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.layer == LayerMask.NameToLayer("Ground") || collision.gameObject.CompareTag("Obstacle"))
@@ -284,9 +258,7 @@ public class HoodedGuy : MonoBehaviour
             targetPoint = movingForward ? pointB : pointA;
 
             if (!patrolsVertically)
-            {
                 spriteRenderer.flipX = lastMoveDirection.x < 0;
-            }
         }
     }
 }

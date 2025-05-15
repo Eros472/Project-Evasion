@@ -17,7 +17,7 @@ TagManager:
   - Player
   - Arrow
   - Boulder
-  - 
+  - Weapon
   - 
   - 
   - 
@@ -59,4 +59,7 @@ TagManager:
     locked: 0
   - name: Hooded
     uniqueID: 337047231
+    locked: 0
+  - name: Weapon
+    uniqueID: 453049485
     locked: 0
