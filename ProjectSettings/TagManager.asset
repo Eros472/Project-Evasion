@@ -3,7 +3,8 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Obstacle
   layers:
   - Default
   - TransparentFX
@@ -55,4 +56,7 @@ TagManager:
     locked: 0
   - name: Filler
     uniqueID: 3340653955
+    locked: 0
+  - name: Hooded
+    uniqueID: 337047231
     locked: 0
