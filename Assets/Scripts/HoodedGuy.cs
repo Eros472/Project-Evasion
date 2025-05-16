@@ -10,12 +10,17 @@ public class HoodedGuy : MonoBehaviour
     public float moveSpeed = 2f;
     public float lookDuration = 2f;
     public float vanishDelay = 3.5f;
-    public float detectionRange = 5f;
-    public float detectionAngle = 45f;
 
-    public Transform player;
+    public int attackDamage = 10;
+    public float attackRadius = 1.5f;
+    public float reappearDistance = 1.5f;
+    public LayerMask playerLayer;
+    public LayerMask groundLayer;
+
     public GameObject detectionCone;
 
+    private PolygonCollider2D coneCollider;
+    private Transform player;
     private Vector3 startPosition;
     private Vector3 pointA;
     private Vector3 pointB;
@@ -59,8 +64,15 @@ public class HoodedGuy : MonoBehaviour
         lastMoveDirection = (targetPoint - transform.position).normalized;
         lookDirection = lastMoveDirection;
 
+        GameObject playerObj = GameObject.FindWithTag("Player");
+        if (playerObj != null)
+            player = playerObj.transform;
+
         if (detectionCone != null)
+        {
             detectionCone.SetActive(false);
+            coneCollider = detectionCone.GetComponent<PolygonCollider2D>();
+        }
     }
 
     void FixedUpdate()
@@ -140,13 +152,54 @@ public class HoodedGuy : MonoBehaviour
 
     bool PlayerInSight()
     {
-        if (player == null) return false;
+        if (player == null || coneCollider == null)
+            return false;
 
-        Vector2 toPlayer = player.position - transform.position;
-        float angle = Vector2.Angle(lookDirection, toPlayer.normalized);
+        return coneCollider.OverlapPoint(player.position);
+    }
 
-        RaycastHit2D hit = Physics2D.Raycast(transform.position, toPlayer.normalized, detectionRange, LayerMask.GetMask("Player"));
-        return hit.collider != null && hit.collider.CompareTag("Player") && angle < detectionAngle;
+    IEnumerator ReappearAndStrike()
+    {
+        SpriteRenderer coneRenderer = detectionCone != null ? detectionCone.GetComponent<SpriteRenderer>() : null;
+        yield return StartCoroutine(FadeBoth(spriteRenderer, coneRenderer, 0f));
+        yield return new WaitForSeconds(vanishDelay);
+
+        Vector2 reappearPos = FindSafePositionNearPlayer();
+        transform.position = reappearPos;
+
+        yield return StartCoroutine(FadeBoth(spriteRenderer, coneRenderer, 1f));
+
+        animator.SetTrigger("ReappearAttack");
+        yield return new WaitForSeconds(0.4f);
+
+        Collider2D hit = Physics2D.OverlapCircle(transform.position, attackRadius, playerLayer);
+        if (hit != null && hit.CompareTag("Player"))
+        {
+            Player p = hit.GetComponent<Player>();
+            if (p != null)
+            {
+                p.TakeDamage(attackDamage);
+                Debug.Log("[HoodedGuy] Player hit for " + attackDamage);
+            }
+        }
+
+        yield return new WaitForSeconds(0.8f);
+        animator.SetTrigger("ResumePatrol");
+        currentState = State.WalkPatrol;
+    }
+
+    private Vector2 FindSafePositionNearPlayer()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            Vector2 offset = Random.insideUnitCircle.normalized * reappearDistance;
+            Vector2 candidate = (Vector2)player.position + offset;
+
+            if (Physics2D.OverlapCircle(candidate, 0.1f, groundLayer))
+                return candidate;
+        }
+
+        return player.position;
     }
 
     IEnumerator FadeBoth(SpriteRenderer npcRenderer, SpriteRenderer coneRenderer, float targetAlpha)
@@ -156,50 +209,34 @@ public class HoodedGuy : MonoBehaviour
 
         while (timeElapsed < fadeDuration)
         {
-            float alpha = Mathf.Lerp(startAlpha, targetAlpha, timeElapsed / fadeDuration);
-            if (npcRenderer != null)
-                npcRenderer.color = new Color(originalColor.r, originalColor.g, originalColor.b, alpha);
+            float t = timeElapsed / fadeDuration;
+            float alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
+
+            Color npcColor = npcRenderer.color;
+            npcColor.a = alpha;
+            npcRenderer.color = npcColor;
+
             if (coneRenderer != null)
-                coneRenderer.color = new Color(coneRenderer.color.r, coneRenderer.color.g, coneRenderer.color.b, alpha);
+            {
+                Color coneColor = coneRenderer.color;
+                coneColor.a = alpha;
+                coneRenderer.color = coneColor;
+            }
+
             timeElapsed += Time.deltaTime;
             yield return null;
         }
 
-        if (npcRenderer != null)
-            npcRenderer.color = new Color(originalColor.r, originalColor.g, originalColor.b, targetAlpha);
+        Color finalNpc = npcRenderer.color;
+        finalNpc.a = targetAlpha;
+        npcRenderer.color = finalNpc;
+
         if (coneRenderer != null)
-            coneRenderer.color = new Color(coneRenderer.color.r, coneRenderer.color.g, coneRenderer.color.b, targetAlpha);
-    }
-
-    IEnumerator ReappearAndStrike()
-    {
-        SpriteRenderer coneRenderer = detectionCone != null ? detectionCone.GetComponent<SpriteRenderer>() : null;
-        yield return StartCoroutine(FadeBoth(spriteRenderer, coneRenderer, 0f));
-
-        yield return new WaitForSeconds(vanishDelay);
-
-        if (player != null)
         {
-            Vector2 offset = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f));
-            transform.position = player.position + (Vector3)offset;
+            Color finalCone = coneRenderer.color;
+            finalCone.a = targetAlpha;
+            coneRenderer.color = finalCone;
         }
-
-        spriteRenderer.enabled = true;
-        if (coneRenderer != null) coneRenderer.enabled = true;
-
-        yield return StartCoroutine(FadeBoth(spriteRenderer, coneRenderer, 1f));
-
-        animator.SetTrigger("ReappearAttack");
-        yield return new WaitForSeconds(0.4f);
-
-        if (player != null)
-        {
-            Destroy(player.gameObject);
-        }
-
-        yield return new WaitForSeconds(0.8f);
-        animator.SetTrigger("ResumePatrol");
-        currentState = State.WalkPatrol;
     }
 
     private void UpdateConeBasedOnEyeDirection()
@@ -237,28 +274,9 @@ public class HoodedGuy : MonoBehaviour
         if (detectionCone != null) detectionCone.SetActive(false);
     }
 
-    void OnTriggerEnter2D(Collider2D other)
+    private void OnDrawGizmosSelected()
     {
-        if (currentState != State.Spotted && other.CompareTag("Player"))
-        {
-            Debug.Log("Player entered detection cone!");
-            currentState = State.Spotted;
-            animator.SetTrigger("Disappear");
-            StartCoroutine(ReappearAndStrike());
-        }
-    }
-
-    void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (collision.gameObject.layer == LayerMask.NameToLayer("Ground") || collision.gameObject.CompareTag("Obstacle"))
-        {
-            currentState = State.LookPatrol;
-            lookTimer = 0f;
-            movingForward = !movingForward;
-            targetPoint = movingForward ? pointB : pointA;
-
-            if (!patrolsVertically)
-                spriteRenderer.flipX = lastMoveDirection.x < 0;
-        }
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRadius);
     }
 }

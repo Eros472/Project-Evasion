@@ -14,18 +14,12 @@ public class WeaponPickup : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             PlayerInventory inventory = other.GetComponent<PlayerInventory>();
-            InventoryBar bar = FindObjectOfType<InventoryBar>();
 
-            if (inventory != null && bar != null && weaponData != null)
+            if (inventory != null && weaponData != null)
             {
-                // Prevent duplicates
-                if (!inventory.weapons.Contains(weaponData.weaponType))
+                if (!inventory.HasWeapon(weaponData.weaponType))
                 {
-                    inventory.weapons.Add(weaponData.weaponType);
-                    int slot = inventory.GetWeaponCount() - 1;
-
-                    bar.SetSlotSprite(slot, weaponData.icon);
-                    Debug.Log("Added " + weaponData.weaponType + " to inventory.");
+                    inventory.EquipWeaponFromPickup(weaponData.weaponType);
                 }
 
                 Destroy(gameObject);

@@ -12,9 +12,9 @@ GameObject:
   - component: {fileID: 4972425801482351933}
   - component: {fileID: 5109287907860224502}
   - component: {fileID: -8809225030659849363}
-  - component: {fileID: 7601054191507284475}
-  m_Layer: 9
-  m_Name: Arrow
+  - component: {fileID: -6565115231516777846}
+  m_Layer: 12
+  m_Name: PlayerArrow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -73,8 +73,8 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: -457553631
-  m_SortingLayer: 4
+  m_SortingLayerID: -881409101
+  m_SortingLayer: 10
   m_SortingOrder: 0
   m_Sprite: {fileID: -44475119, guid: 6a31447b97d566947b7e93f2ca45d9fa, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -159,7 +159,7 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.23, y: 0.07}
   m_EdgeRadius: 0
---- !u!114 &7601054191507284475
+--- !u!114 &-6565115231516777846
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -168,8 +168,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 6744939663907081635}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5cbd3de82b52cd94b9a27ddcd86f9cb3, type: 3}
+  m_Script: {fileID: 11500000, guid: 3138a51e9f17414409268feb7b9964b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 1
+  damage: 3
   lifeTime: 5
+  speed: 2
+  direction: {x: 0, y: 0}

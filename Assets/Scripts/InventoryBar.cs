@@ -26,20 +26,36 @@ public class InventoryBar : MonoBehaviour
         UpdateSlotHighlight();
     }
 
-    void Update()
+    /*void Update()
     {
         if (Input.GetKeyDown(KeyCode.Alpha1)) SelectSlot(0);
         if (Input.GetKeyDown(KeyCode.Alpha2)) SelectSlot(1);
         if (Input.GetKeyDown(KeyCode.Alpha3)) SelectSlot(2);
         if (Input.GetKeyDown(KeyCode.Alpha4)) SelectSlot(3);
+    }*/
+
+    public void SelectSlot(int index)
+    {
+        for (int i = 0; i < slots.Length; i++)
+        {
+            slots[i].color = (i == index) ? selectedColor : normalColor;
+        }
+
+        currentIndex = index;
     }
 
-    void SelectSlot(int index)
+
+    public void ClearSelectedSlot()
     {
-        currentIndex = index;
-        Debug.Log("Slot selected: " + index);
-        UpdateSlotHighlight();
+        for (int i = 0; i < slots.Length; i++)
+        {
+            slots[i].color = normalColor;
+        }
+
+        currentIndex = -1; // no slot selected
     }
+
+
 
 
     void UpdateSlotHighlight()

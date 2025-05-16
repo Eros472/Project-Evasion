@@ -8,13 +8,28 @@ public class HealthBar : MonoBehaviour
 
     public void SetMaxHealth(int health)
     {
+        Debug.Log("[HealthBar] SetMaxHealth called with: " + health);
+
+        if (slider == null)
+        {
+            Debug.LogError("[HealthBar] SLIDER IS NULL!");
+            return;
+        }
+
         slider.maxValue = health;
         slider.value = health;
         UpdateHealthText(health, health);
     }
 
+
     public void SetHealth(int health)
     {
+        if (slider == null)
+        {
+            Debug.LogError("[HealthBar] SLIDER IS NULL on SetHealth!");
+            return;
+        }
+
         slider.value = health;
         UpdateHealthText(health, (int)slider.maxValue);
     }

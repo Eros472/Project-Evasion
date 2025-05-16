@@ -3,86 +3,135 @@ using UnityEngine;
 
 public enum WeaponType
 {
-    Dagger,
-    Bow
+    None = -1,   // 👈 Add this
+    Dagger = 0,
+    Bow = 1
 }
+
 
 public class PlayerInventory : MonoBehaviour
 {
-    public int currentWeaponIndex = 0;
+    public int currentWeaponIndex = -1;
     public List<WeaponType> weapons = new List<WeaponType>();
-    private bool weaponEquippedByPlayer = false;
-    private bool weaponEquipped = false; // Tracks whether something is actively equipped
-    private int lastSelectedSlot = -1;   // Tracks previous slot selection
 
+    public bool weaponEquipped = false;
+    public int currentDamage = 0;
 
-
-
-    public InventoryBar inventoryBar; // Drag your UI bar GameObject in Inspector
+    public InventoryBar inventoryBar;
     public GameObject daggerObject;
     public GameObject bowObject;
 
-    void Start()
-    {
-        // Load saved weapons if they exist
-        if (GameManager.Instance != null && GameManager.Instance.savedWeapons.Count > 0)
-        {
-            weapons = new List<WeaponType>(GameManager.Instance.savedWeapons);
-        }
+    private Player player;
 
-        // 🔒 Don't equip anything yet — wait for user input
-        if (daggerObject != null) daggerObject.SetActive(false);
-        if (bowObject != null) bowObject.SetActive(false);
+    private void Awake()
+    {
+        DontDestroyOnLoad(gameObject);
     }
 
+    void Start()
+    {
+        player = FindObjectOfType<Player>();
+
+        if (UIManager.Instance != null)
+            inventoryBar = UIManager.Instance.inventoryBar;
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.RestorePlayerInventory(this);
+
+            if (GameManager.Instance.savedEquippedState &&
+                GameManager.Instance.savedEquippedIndex >= 0 &&
+                GameManager.Instance.savedEquippedIndex < weapons.Count)
+            {
+                currentWeaponIndex = GameManager.Instance.savedEquippedIndex;
+                weaponEquipped = true;
+                EquipCurrentWeapon();
+                inventoryBar?.SelectSlot(currentWeaponIndex);
+            }
+        }
+
+        HideAllWeapons(); // Always start clean
+    }
 
     void Update()
     {
+        if (inventoryBar == null && UIManager.Instance != null)
+            inventoryBar = UIManager.Instance.inventoryBar;
+
         if (inventoryBar == null) return;
 
-        int selectedSlot = inventoryBar.GetSelectedSlot();
+        if (Input.GetKeyDown(KeyCode.Alpha1)) ToggleWeaponSlot(0);
+        if (Input.GetKeyDown(KeyCode.Alpha2)) ToggleWeaponSlot(1);
 
-        // Handle slot key press (1–4)
-        if (Input.GetKeyDown(KeyCode.Alpha1) ||
-            Input.GetKeyDown(KeyCode.Alpha2) ||
-            Input.GetKeyDown(KeyCode.Alpha3) ||
-            Input.GetKeyDown(KeyCode.Alpha4))
+        if (Input.GetKeyDown(KeyCode.Space))
+            UseCurrentWeapon();
+    }
+
+    private void ToggleWeaponSlot(int slot)
+    {
+        if (slot >= weapons.Count)
         {
-            // Toggle logic
-            if (selectedSlot == lastSelectedSlot && weaponEquipped)
-            {
-                // De-equip
-                Debug.Log("De-equipping weapon.");
-                weaponEquipped = false;
-                currentWeaponIndex = -1;
-                HideAllWeapons();
-            }
-            else if (selectedSlot < weapons.Count)
-            {
-                // Equip new weapon
-                currentWeaponIndex = selectedSlot;
-                weaponEquipped = true;
-                EquipCurrentWeapon();
-                Debug.Log("Equipped from slot " + selectedSlot);
-            }
-            else
-            {
-                // Invalid/empty slot — de-equip
-                Debug.Log("Empty slot selected. Clearing equipped weapon.");
-                weaponEquipped = false;
-                currentWeaponIndex = -1;
-                HideAllWeapons();
-            }
-
-            lastSelectedSlot = selectedSlot;
+            Debug.Log("Attempted to select empty weapon slot.");
+            return;
         }
 
-        if (Input.GetMouseButtonDown(0) && weaponEquipped)
+        if (currentWeaponIndex == slot && weaponEquipped)
         {
-            UseCurrentWeapon();
+            Debug.Log("De-equipping weapon from slot " + slot);
+            weaponEquipped = false;
+            currentWeaponIndex = -1;
+
+            HideAllWeapons();
+            inventoryBar.ClearSelectedSlot();
+
+            if (player != null)
+            {
+                player.EquipWeapon(WeaponType.None);
+                Debug.Log("Player weapon should now be empty: " + player.currentWeapon);
+            }
+        }
+        else
+        {
+            currentWeaponIndex = slot;
+            weaponEquipped = true;
+            EquipCurrentWeapon();
+            inventoryBar.SelectSlot(slot);
+            Debug.Log("Equipped weapon from slot " + slot);
         }
     }
 
+    public void EquipCurrentWeapon()
+    {
+        if (!weaponEquipped)
+        {
+            Debug.LogWarning("[PlayerInventory] Ignoring EquipCurrentWeapon() — weaponEquipped is false.");
+            return;
+        }
+
+        if (currentWeaponIndex < 0 || currentWeaponIndex >= weapons.Count)
+        {
+            Debug.LogWarning("[PlayerInventory] Invalid index.");
+            return;
+        }
+
+        WeaponType weapon = weapons[currentWeaponIndex];
+
+        HideAllWeapons();
+
+        if (weapon == WeaponType.Dagger && daggerObject != null)
+            daggerObject.SetActive(true);
+        else if (weapon == WeaponType.Bow && bowObject != null)
+            bowObject.SetActive(true);
+
+        currentDamage = 0;
+        WeaponItem item = (weapon == WeaponType.Dagger ? daggerObject : bowObject)?.GetComponent<WeaponItem>();
+        if (item != null) currentDamage = item.damage;
+
+        if (player != null)
+            player.EquipWeapon(weapon);
+
+        Debug.Log("Equipped: " + weapon);
+    }
 
     private void HideAllWeapons()
     {
@@ -90,74 +139,51 @@ public class PlayerInventory : MonoBehaviour
         if (bowObject != null) bowObject.SetActive(false);
     }
 
-
-
-
-
-
-
-
-
-    /*public void AddWeapon(WeaponType newWeapon)
-    {
-        if (!weapons.Contains(newWeapon))
-        {
-            weapons.Add(newWeapon);
-            Debug.Log($"Added {newWeapon} to inventory.");
-
-            int index = weapons.Count - 1;
-
-            if (inventoryBar != null)
-            {
-                inventoryBar.AddWeaponIcon(index, newWeapon); 
-            }
-        }
-    }*/
-
-
-    public int GetWeaponCount()
-    {
-        return weapons.Count;
-    }
-
-    public void EquipCurrentWeapon()
-    {
-        if (weapons.Count == 0) return;
-
-        WeaponType weapon = weapons[currentWeaponIndex];
-        Debug.Log("Equipped: " + weapon);
-
-        if (daggerObject != null)
-        {
-            bool show = (weapon == WeaponType.Dagger);
-            daggerObject.SetActive(show);
-            Debug.Log("Dagger visibility set to: " + show);
-        }
-
-        if (bowObject != null)
-        {
-            bool show = (weapon == WeaponType.Bow);
-            bowObject.SetActive(show);
-            Debug.Log("Bow visibility set to: " + show);
-        }
-    }
-
-
     private void UseCurrentWeapon()
     {
-        if (weapons.Count == 0) return;
+        if (currentWeaponIndex < 0 || currentWeaponIndex >= weapons.Count) return;
 
         WeaponType weapon = weapons[currentWeaponIndex];
+
         switch (weapon)
         {
             case WeaponType.Dagger:
                 Debug.Log("Stabbing with dagger!");
-                // TODO: Add dagger animation or logic
                 break;
             case WeaponType.Bow:
-                Debug.Log("Firing arrow!");
-                // TODO: Add bow firing logic
+                Debug.Log("Using bow!");
                 break;
         }
+    }
+
+    public void EquipWeaponFromPickup(WeaponType type)
+    {
+        if (!weapons.Contains(type))
+        {
+            weapons.Add(type);
+
+            int slot = weapons.IndexOf(type);
+            inventoryBar?.AddWeaponIcon(slot, type);
+            Debug.Log("Set icon for slot " + slot + ": " + type);
+        }
+
+        int equippedSlot = weapons.IndexOf(type);
+        currentWeaponIndex = equippedSlot;
+        weaponEquipped = true;
+
+        EquipCurrentWeapon();
+        inventoryBar?.SelectSlot(equippedSlot);
+
+        Debug.Log("Picked up and equipped: " + type);
+    }
+
+    public bool HasWeapon(WeaponType weapon)
+    {
+        return weapons.Contains(weapon);
+    }
+
+    public int GetWeaponCount()
+    {
+        return weapons.Count;
     }
 }

@@ -1,10 +1,12 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class GoblinShooter : MonoBehaviour
 {
     [Header("Detection & Combat")]
     public float detectionRadius = 5f;
     public float fireRate = 2f;
+    public int arrowDamage = 5; // ✅ Customizable damage per goblin
+
     public GameObject arrowPrefab;
     public Transform firePoint;
     public LayerMask playerMask;
@@ -24,7 +26,7 @@ public class GoblinShooter : MonoBehaviour
 
         if (PlayerInRange())
         {
-            FacePlayer(); // Keeps Goblin facing live direction
+            FacePlayer();
 
             if (fireCooldown <= 0f)
             {
@@ -34,7 +36,6 @@ public class GoblinShooter : MonoBehaviour
         }
     }
 
-
     /// <summary>
     /// Called by an Animation Event at the end of the Goblin_Shoot animation.
     /// </summary>
@@ -43,21 +44,22 @@ public class GoblinShooter : MonoBehaviour
         if (player == null) return;
 
         Vector2 direction = (player.position - firePoint.position).normalized;
-
-        // Get angle in degrees
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
-        // Adjust 180� since arrow sprite points LEFT by default
         GameObject arrow = Instantiate(arrowPrefab, firePoint.position, Quaternion.Euler(0, 0, angle + 180f));
 
         Rigidbody2D rb = arrow.GetComponent<Rigidbody2D>();
         rb.velocity = direction * 3f;
 
-        Debug.Log($"Arrow fired at angle: {angle + 180f}");
+        // ✅ Set damage on arrow if script is present
+        Arrow arrowScript = arrow.GetComponent<Arrow>();
+        if (arrowScript != null)
+        {
+            arrowScript.damage = arrowDamage;
+        }
+
+        Debug.Log($"Arrow fired at angle: {angle + 180f} with damage: {arrowDamage}");
     }
-
-
-
 
     private bool PlayerInRange()
     {
@@ -77,8 +79,6 @@ public class GoblinShooter : MonoBehaviour
         if (player == null) return;
 
         Vector3 scale = transform.localScale;
-
-        // Flip X scale based on player's position
         scale.x = player.position.x < transform.position.x ? Mathf.Abs(scale.x) : -Mathf.Abs(scale.x);
         transform.localScale = scale;
     }

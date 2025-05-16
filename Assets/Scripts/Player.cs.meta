@@ -3,7 +3,13 @@ guid: 4445c15eca54b85498eea9041de828e0
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - bloodEffectPrefab: {instanceID: 0}
+  - healthBar: {instanceID: 0}
+  - arrowPrefab: {instanceID: 0}
+  - shootPoint: {instanceID: 0}
+  - bowModelObject: {instanceID: 0}
+  - daggerModelObject: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

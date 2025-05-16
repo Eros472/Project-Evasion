@@ -194,10 +194,15 @@ public class Ogre : MonoBehaviour
     {
         if (collision.CompareTag("Player") && currentState == OgreState.Melee)
         {
-            Debug.Log("Player touched — Ogre kills player.");
-            Destroy(collision.gameObject); // Replace with player.Die() if needed
+            Debug.Log("Player touched — Ogre deals melee damage.");
+            Player player = collision.GetComponent<Player>();
+            if (player != null)
+            {
+                player.TakeDamage(5); // Set your melee damage value
+            }
         }
     }
+
 
     private void OnDrawGizmosSelected()
     {
