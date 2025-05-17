@@ -14,8 +14,8 @@ _A stealth-based game by Beyond the Box_
 
 Each level has a unique environment based on the mission and target:
 
-- **Level 1**: Town  
-- **Level 2**: Mystic Forest 
+- **Level 1**: Mirevale Town  
+- **Level 2**: Gloamveil Woods 
 
 ---
 
@@ -50,7 +50,10 @@ Each level has a unique environment based on the mission and target:
 - **Controls**:
   - Move: `W`, `A`, `S`, `D`  
   - Crouch: `LCTRL`  
-  - Sprint: `LSHIFT` 
+  - Sprint: `LSHIFT`
+  - Use Weapon: `SPACE` OR `LEFT-CLICK`
+  - Interact with NPC: `F`
+  - Move to Next Page in Dialogue: `SPACE`
 
 - **Character Classes**:
   - Each class has unique base stats and a special ability
@@ -86,5 +89,5 @@ Each level has a unique environment based on the mission and target:
 
 ## 🔧 Division of Labor
 
-- **Erick Hambardzumyan**: Gameplay logic, mechanics, testing, player controls, animations, level design, sprite design, debugging, creativity
+- **Erick Hambardzumyan**: Gameplay logic, mechanics, testing, player controls, animations, level design, sprite design, debugging, creativity, final boss design, health + inventory + UI + game manager systems, debugging
 - **Arneh Khachatoorian**: Story lore, debugging gameplay logic, final boss design, health and inventory system, main menu design
