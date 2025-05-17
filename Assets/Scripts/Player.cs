@@ -55,9 +55,11 @@ public class Player : MonoBehaviour
         boxCollider = GetComponent<BoxCollider2D>();
         animator = GetComponent<Animator>();
 
+        // Ensure health is correctly set from GameManager
         if (GameManager.Instance != null)
         {
             GameManager.Instance.RestorePlayerHealth(out int savedCurrent, out int savedMax);
+
             if (savedMax > 0 && savedCurrent >= 0)
             {
                 maxHealth = savedMax;
@@ -73,7 +75,7 @@ public class Player : MonoBehaviour
         }
         else
         {
-            currentHealth = maxHealth;
+            currentHealth = maxHealth; // If no GameManager, set to default
         }
 
         if (healthBar == null && UIManager.Instance != null)
@@ -86,6 +88,9 @@ public class Player : MonoBehaviour
         }
     }
 
+
+
+
     public void SetHealth(int newHealth)
     {
         currentHealth = newHealth;
@@ -97,38 +102,56 @@ public class Player : MonoBehaviour
     {
         Debug.Log("[Player] Scene loaded: " + scene.name);
 
-        // Force UI rebinding
+        int targetMaxHealthForScene;
+        int targetCurrentHealthForScene;
+
+        // Determine the correct health values for the loaded scene
+        if (scene.name == "Level2" || scene.name == "Forest") // Use your exact scene names
+        {
+            targetMaxHealthForScene = 300;
+            targetCurrentHealthForScene = 300; // Start with full health for the level
+        }
+        else // Default for MainScene, MainMenu, or any other scene
+        {
+            targetMaxHealthForScene = 50;
+            targetCurrentHealthForScene = 50; // Start with full health for the level
+        }
+
+        // --- Apply the new health values to the Player object ---
+        this.maxHealth = targetMaxHealthForScene;
+        this.currentHealth = targetCurrentHealthForScene;
+
+        Debug.Log($"[Player] Stats for scene '{scene.name}': MaxHealth = {this.maxHealth}, CurrentHealth = {this.currentHealth}");
+
+        // Update the HealthBar UI
+        // Re-acquire HealthBar instance in case UI is reloaded/changed with the scene
         if (UIManager.Instance != null)
         {
             healthBar = UIManager.Instance.healthBar;
-
-            if (healthBar != null)
-            {
-                Debug.Log("[Player] HealthBar bound and updated.");
-                healthBar.SetMaxHealth(maxHealth);
-                healthBar.SetHealth(currentHealth);
-            }
-            else
-            {
-                Debug.LogWarning("[Player] HealthBar is STILL null after rebinding!");
-            }
+        }
+        // It's also good practice to check healthBar for null again before using
+        if (healthBar != null)
+        {
+            healthBar.SetMaxHealth(this.maxHealth); // Use the Player's updated maxHealth
+            healthBar.SetHealth(this.currentHealth); // Use the Player's updated currentHealth
+            Debug.Log("[Player] HealthBar updated for new scene values.");
+        }
+        else
+        {
+            Debug.LogWarning("[Player] HealthBar reference is null in OnSceneLoaded for scene: " + scene.name);
         }
 
-        // 💡 Add this safety fallback if player health wasn't initialized correctly
-        if (GameManager.Instance != null && GameManager.Instance.resetHealthOnSceneLoad)
+        // Save the new current and max health to GameManager so it's aware of the change
+        // This is important if GameManager's saved values are used for respawns within the same level
+        // or if other systems query GameManager for player health.
+        if (GameManager.Instance != null)
         {
-            currentHealth = maxHealth;
-            GameManager.Instance.SavePlayerHealth(currentHealth, maxHealth);
-
-            if (healthBar != null)
-            {
-                healthBar.SetMaxHealth(maxHealth);
-                healthBar.SetHealth(currentHealth);
-            }
-
-            Debug.Log("[Player] Forced full health reset after scene load.");
+            GameManager.Instance.SavePlayerHealth(this.currentHealth, this.maxHealth);
+            Debug.Log($"[Player] Saved new scene-specific health to GameManager: {this.currentHealth}/{this.maxHealth}");
         }
     }
+
+
 
 
     void Update()
@@ -218,26 +241,47 @@ public class Player : MonoBehaviour
     {
         if (isDead) return;
 
+        Debug.Log($"[PLAYER SCRIPT] TakeDamage({amount}) called. Previous Health: {currentHealth}");
+
+        // Reduce health and ensure it doesn't go below 0 or above maxHealth
         currentHealth -= amount;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
 
+        // Save current health and max health after damage is applied
         if (GameManager.Instance != null)
+        {
             GameManager.Instance.SavePlayerHealth(currentHealth, maxHealth);
+        }
 
+        // Instantiate blood effect if assigned
         if (bloodEffectPrefab != null)
+        {
             Instantiate(bloodEffectPrefab, transform.position, Quaternion.identity);
+        }
 
+        // Ensure healthBar reference is set
         if (healthBar == null && UIManager.Instance != null)
+        {
             healthBar = UIManager.Instance.healthBar;
+        }
 
+        // Update the health bar UI
         if (healthBar != null)
+        {
             healthBar.SetHealth(currentHealth);
+        }
         else
+        {
             Debug.LogWarning("[Player] HealthBar is still null during TakeDamage");
+        }
 
+        // Check if the player is dead
         if (currentHealth <= 0)
+        {
             StartCoroutine(Die());
+        }
     }
+
 
     private IEnumerator Die()
     {

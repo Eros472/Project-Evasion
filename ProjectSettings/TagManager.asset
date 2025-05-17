@@ -20,7 +20,7 @@ TagManager:
   - Boulder
   - Weapon
   - PlayerArrow
-  - 
+  - Boss
   - 
   - 
   - 
@@ -72,4 +72,7 @@ TagManager:
     locked: 0
   - name: PlayerProjectile
     uniqueID: 3413558195
+    locked: 0
+  - name: Boss
+    uniqueID: 1156381401
     locked: 0

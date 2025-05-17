@@ -114,11 +114,11 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 416
+        y: 341.3333
         width: 192
-        height: 96
+        height: 170.66667
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -135,11 +135,11 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 320
+        y: 171.33333
         width: 192
-        height: 96
+        height: 170.66667
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -156,11 +156,11 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 224
+        y: 1.3333282
         width: 192
-        height: 96
+        height: 170.66667
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -168,48 +168,6 @@ TextureImporter:
       bones: []
       spriteID: fc8b3305715ed894d9d8ef0ff6a0c068
       internalID: -887123670
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Elder Dragon Attack1 Sprites_3
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 128
-        width: 192
-        height: 96
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 46b74a0a0b0cff349a152d7be97e808b
-      internalID: 438727367
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Elder Dragon Attack1 Sprites_4
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 0
-        width: 192
-        height: 128
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: b95ea7de7375a6648b30584d7c41554a
-      internalID: 1199875319
       vertices: []
       indices: 
       edges: []
@@ -228,8 +186,6 @@ TextureImporter:
       Elder Dragon Attack1 Sprites_0: 1347720149
       Elder Dragon Attack1 Sprites_1: -658861780
       Elder Dragon Attack1 Sprites_2: -887123670
-      Elder Dragon Attack1 Sprites_3: 438727367
-      Elder Dragon Attack1 Sprites_4: 1199875319
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
